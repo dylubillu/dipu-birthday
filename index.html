@@ -135,14 +135,51 @@ const dayParam=params.get("day");
 const home=document.getElementById("home"), page=document.getElementById("exhibit");
 const archive=document.getElementById("archive");
 const pad=n=>String(n).padStart(2,"0");
+// Daily unlock schedule: exhibit 01 opens on 12 October 2026, finale on 28 October.
+const startDate = new Date(2026, 9, 12); // month is zero-based
+const today = new Date();
+today.setHours(0,0,0,0);
+const dayStart = new Date(startDate);
+dayStart.setHours(0,0,0,0);
+const daysSinceStart = Math.floor((today - dayStart) / 86400000);
+const availableDay = Math.max(0, Math.min(17, daysSinceStart + 1));
+// Optional preview mode for Dylan while editing/testing. Do not share preview links.
+const previewMode = params.get("preview") === "dylan";
+const maxVisibleDay = previewMode ? 17 : availableDay;
+
 exhibits.forEach(e=>{
- const a=document.createElement("a"); a.className="exhibit"; a.href="?day="+pad(e.day);
- a.innerHTML=`<span class="num">${e.final?"Birthday finale":"Exhibit "+pad(e.day)} · ${e.date}</span><strong>${e.title}</strong><span>${e.final?"The final finding":"Open the evidence ↗"}</span>`;
+ const a=document.createElement("a"); a.className="exhibit";
+ const isUnlocked = e.day <= maxVisibleDay;
+ if(isUnlocked){
+   a.href="?day="+pad(e.day);
+   a.innerHTML=`<span class="num">${e.final?"Birthday finale":"Exhibit "+pad(e.day)} · ${e.date}</span><strong>${e.title}</strong><span>${e.final?"The final finding":"Open the evidence ↗"}</span>`;
+ }else{
+   a.href="#";
+   a.setAttribute("aria-disabled","true");
+   a.style.opacity=".68";
+   a.style.cursor="not-allowed";
+   a.innerHTML=`<span class="num">SEALED · ${e.date}</span><strong>Evidence not yet available</strong><span>Unlocks on ${e.date} 🔒</span>`;
+   a.addEventListener("click",ev=>ev.preventDefault());
+ }
  archive.appendChild(a);
 });
 if(dayParam){
  const n=parseInt(dayParam,10), e=exhibits.find(x=>x.day===n);
- if(e){
+ if(e && n > maxVisibleDay){
+   home.classList.add("hidden"); page.classList.remove("hidden");
+   document.title="Exhibit sealed | Dipu & Dylan";
+   document.getElementById("day-kicker").textContent="Evidence sealed";
+   document.getElementById("day-title").textContent="Not so fast, investigator.";
+   document.getElementById("day-date").textContent="This exhibit is not available yet.";
+   document.getElementById("day-copy").textContent="Some evidence must be revealed at the right time. Come back on "+e.date+" to open this page. For now, the investigation remains classified.";
+   document.getElementById("day-verdict").textContent="Curiosity noted. Access denied until the scheduled reveal.";
+   document.getElementById("day-prompt").textContent="You haven't missed anything. Check back on the date above.";
+   document.getElementById("progress-fill").style.width=(Math.max(0,maxVisibleDay)/17*100)+"%";
+   document.getElementById("next-link").classList.add("hidden");
+   document.getElementById("copy-link").classList.add("hidden");
+   document.getElementById("prev-link").href="./";
+   document.getElementById("prev-link").textContent="← Back to archive";
+ }else if(e){
   home.classList.add("hidden");page.classList.remove("hidden");
   document.title=e.title+" | Dipu & Dylan";
   document.getElementById("day-kicker").textContent=e.final?"The birthday finale":"Exhibit "+pad(e.day)+" of 16";
@@ -154,8 +191,12 @@ if(dayParam){
   document.getElementById("progress-fill").style.width=(e.day/exhibits.length*100)+"%";
   if(e.quote){const q=document.getElementById("day-quote");q.textContent=e.quote;q.classList.remove("hidden")}
   const next=document.getElementById("next-link"), prev=document.getElementById("prev-link");
-  if(e.day<exhibits.length){next.href="?day="+pad(e.day+1);next.textContent=e.day===16?"Open the birthday finale →":"Next exhibit →"}
-  else {next.href="./";next.textContent="Return to the archive ↗"}
+  if(e.day < exhibits.length && e.day < maxVisibleDay){
+    next.href="?day="+pad(e.day+1);next.textContent=e.day===16?"Open the birthday finale →":"Previous day's evidence →";
+  } else if(e.day < exhibits.length){
+    next.href="./";next.textContent="Tomorrow's evidence is still sealed 🔒";
+    next.classList.add("secondary");
+  } else {next.href="./";next.textContent="Return to the archive ↗"}
   if(e.day>1){prev.href="?day="+pad(e.day-1);prev.textContent="← Previous exhibit"}else{prev.href="./";prev.textContent="← Home"}
   document.getElementById("copy-link").addEventListener("click",async()=>{
     try{await navigator.clipboard.writeText(location.href);document.getElementById("copy-link").textContent="Link copied ✓"}
