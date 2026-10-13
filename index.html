@@ -99,13 +99,13 @@ h1 em{font-weight:400;color:var(--red)}
       <div class="verdict"><strong>Official finding</strong><p id="day-verdict"></p></div>
       <p class="small" id="day-prompt"></p>
       <div class="actions">
-        <a class="btn" id="next-link" href="?day=02">Next exhibit →</a>
         <button class="btn secondary" id="copy-link" type="button">Copy this link</button>
       </div>
     </article>
     <div class="navrow">
-      <a class="btn secondary" id="prev-link" href="./">← Previous</a>
+      <a class="btn secondary" id="prev-link" href="./">← Previous exhibit</a>
       <a class="btn secondary" href="./">All exhibits</a>
+      <a class="btn" id="next-link" href="?day=02">Next exhibit →</a>
     </div>
   </main>
   <footer class="footer">Made with questionable logic, a little stubbornness, and a lot of care.<br>*The archive is unofficial. The friendship is not.</footer>
@@ -192,11 +192,23 @@ if(dayParam){
   if(e.quote){const q=document.getElementById("day-quote");q.textContent=e.quote;q.classList.remove("hidden")}
   const next=document.getElementById("next-link"), prev=document.getElementById("prev-link");
   if(e.day < exhibits.length && e.day < maxVisibleDay){
-    next.href="?day="+pad(e.day+1);next.textContent=e.day===16?"Open the birthday finale →":"Previous day's evidence →";
+    next.href="?day="+pad(e.day+1);
+    next.textContent=e.day===16?"Open the birthday finale →":"Next exhibit →";
+    next.classList.remove("secondary");
+    next.removeAttribute("aria-disabled");
+    next.style.pointerEvents="";
+    next.style.opacity="";
   } else if(e.day < exhibits.length){
-    next.href="./";next.textContent="Tomorrow's evidence is still sealed 🔒";
+    next.href="#";
+    next.textContent="Tomorrow's evidence is still sealed 🔒";
     next.classList.add("secondary");
-  } else {next.href="./";next.textContent="Return to the archive ↗"}
+    next.setAttribute("aria-disabled","true");
+    next.style.opacity=".75";
+    next.addEventListener("click",ev=>ev.preventDefault());
+  } else {
+    next.href="./";next.textContent="Return to the archive ↗";
+    next.classList.remove("secondary");
+  }
   if(e.day>1){prev.href="?day="+pad(e.day-1);prev.textContent="← Previous exhibit"}else{prev.href="./";prev.textContent="← Home"}
   document.getElementById("copy-link").addEventListener("click",async()=>{
     try{await navigator.clipboard.writeText(location.href);document.getElementById("copy-link").textContent="Link copied ✓"}
